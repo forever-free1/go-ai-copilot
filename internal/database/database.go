@@ -42,9 +42,18 @@ func Init(cfg Config) error {
 		&model.User{},
 		&model.Session{},
 		&model.Message{},
+		&model.RAGDocument{},
+		&model.RAGChunk{},
 	); err != nil {
 		return fmt.Errorf("表迁移失败: %v", err)
 	}
+
+	// 创建向量索引（如果不存在）
+	db.Exec("CREATE EXTENSION IF NOT EXISTS vector")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_rag_chunks_embedding ON rag_chunks USING ivfflat (embedding vector_cosine_ops)")
+
+	// 注册向量类型
+	// 注意：pgvector 需要数据库支持 vector 扩展
 
 	DB = db
 	log.Println("数据库连接成功")

@@ -61,9 +61,13 @@ func main() {
 	}
 	userHandler := handler.NewUserHandler(jwtTool)
 	sessionHandler := handler.NewSessionHandler()
+	ragHandler, err := handler.NewRAGHandler()
+	if err != nil {
+		log.Printf("警告: RAG处理器初始化失败: %v", err)
+	}
 
 	// 7. 设置路由
-	r := router.Setup(jwtTool, chatHandler, userHandler, sessionHandler)
+	r := router.Setup(jwtTool, chatHandler, userHandler, sessionHandler, ragHandler)
 
 	// 8. 启动服务
 	port := cfg.Server.Port

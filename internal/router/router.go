@@ -8,7 +8,7 @@ import (
 )
 
 // Setup 设置路由
-func Setup(jwtTool *jwt.JWT, chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, sessionHandler *handler.SessionHandler) *gin.Engine {
+func Setup(jwtTool *jwt.JWT, chatHandler *handler.ChatHandler, userHandler *handler.UserHandler, sessionHandler *handler.SessionHandler, ragHandler *handler.RAGHandler) *gin.Engine {
 	// 初始化Gin
 	r := gin.Default()
 
@@ -49,6 +49,17 @@ func Setup(jwtTool *jwt.JWT, chatHandler *handler.ChatHandler, userHandler *hand
 		authorized.POST("/chat", chatHandler.Chat)
 		authorized.POST("/chat/stream", chatHandler.StreamChat)
 		authorized.POST("/chat/mode", chatHandler.HandleChatWithMode)
+
+		// RAG知识库接口
+		ragGroup := authorized.Group("/rag")
+		{
+			ragGroup.POST("/upload", ragHandler.UploadDocument)
+			ragGroup.GET("/list", ragHandler.GetDocuments)
+			ragGroup.GET("/:id", ragHandler.GetDocument)
+			ragGroup.DELETE("/:id", ragHandler.DeleteDocument)
+			ragGroup.POST("/search", ragHandler.Search)
+			ragGroup.POST("/chat", ragHandler.RAGChat)
+		}
 	}
 
 	return r

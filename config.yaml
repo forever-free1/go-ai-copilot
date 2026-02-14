@@ -13,6 +13,8 @@ ai:
   max_tokens: 2000
   # 超时设置(秒)
   timeout: 120
+  # Embedding模型
+  embedding_model: "text-embedding-3-small"
 
 # 数据库配置
 database:

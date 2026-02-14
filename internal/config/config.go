@@ -25,11 +25,12 @@ type ServerConfig struct {
 
 // AIConfig AI配置
 type AIConfig struct {
-	BaseURL    string  `yaml:"base_url"`
-	Model      string  `yaml:"model"`
-	Temperature float64 `yaml:"temperature"`
-	MaxTokens  int     `yaml:"max_tokens"`
-	Timeout    int     `yaml:"timeout"`
+	BaseURL         string  `yaml:"base_url"`
+	Model           string  `yaml:"model"`
+	Temperature     float64 `yaml:"temperature"`
+	MaxTokens       int     `yaml:"max_tokens"`
+	Timeout         int     `yaml:"timeout"`
+	EmbeddingModel  string  `yaml:"embedding_model"`
 }
 
 // DatabaseConfig 数据库配置
