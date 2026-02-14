@@ -5,5 +5,17 @@
 # Go binaries
 *.exe
 SuperBizAgent
+super-biz-agent
 
 .env
+
+# Build outputs
+web/dist/
+
+# Claude
+.claude/
+
+# Temp
+nul
+server.exe~
+web/node_modules/

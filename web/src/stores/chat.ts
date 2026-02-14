@@ -5,6 +5,7 @@ import { getSessions, createSession, deleteSession, getHistory } from '../api/se
 export interface Session {
   id: number
   title: string
+  mode: string
   created_at: string
   updated_at: string
 }
@@ -30,8 +31,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // 创建会话
-  const createNewSession = async (title: string) => {
-    const res = await createSession(title)
+  const createNewSession = async (title: string, mode: string = 'chat') => {
+    const res = await createSession(title, mode)
     sessions.value.unshift(res.data)
     return res.data
   }

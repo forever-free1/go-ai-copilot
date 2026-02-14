@@ -26,6 +26,7 @@ func NewSessionHandler() *SessionHandler {
 // CreateSessionRequest 创建会话请求
 type CreateSessionRequest struct {
 	Title string `json:"title" binding:"required,max=255"`
+	Mode  string `json:"mode"`
 }
 
 // CreateSession 创建会话
@@ -47,9 +48,16 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
 		title = "新会话"
 	}
 
+	// 默认模式为 chat
+	mode := req.Mode
+	if mode == "" {
+		mode = "chat"
+	}
+
 	session := model.Session{
 		UserID: userID,
 		Title:  title,
+		Mode:   mode,
 	}
 
 	if err := database.DB.Create(&session).Error; err != nil {

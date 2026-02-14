@@ -4,8 +4,8 @@ export const getSessions = () => {
   return request.get<any, any>('/api/v1/session/list')
 }
 
-export const createSession = (title: string) => {
-  return request.post<any, any>('/api/v1/session', { title })
+export const createSession = (title: string, mode: string = 'chat') => {
+  return request.post<any, any>('/api/v1/session', { title, mode })
 }
 
 export const getSession = (id: number) => {

@@ -14,6 +14,7 @@ type Session struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	UserID    uint           `gorm:"index;not null" json:"user_id"`
 	Title     string         `gorm:"size:255;not null" json:"title"`
+	Mode      string         `gorm:"size:20;default:chat" json:"mode"` // chat, code_generate, code_explain, code_optimize, code_vuln, code_test, rag
 }
 
 // TableName 表名
