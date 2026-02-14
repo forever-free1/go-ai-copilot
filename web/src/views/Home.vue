@@ -1,13 +1,25 @@
 <template>
   <div class="home-container">
     <!-- 侧边栏 -->
-    <aside class="sidebar">
+    <aside
+      class="sidebar"
+      @mouseenter="sidebarExpanded = true"
+      @mouseleave="sidebarExpanded = false"
+      :class="{ expanded: sidebarExpanded }"
+    >
       <div class="sidebar-header">
         <h1 class="logo">Go AI</h1>
-        <el-button type="primary" size="small" class="new-chat-btn" @click="handleNewChat">
-          <el-icon><Plus /></el-icon>
-          新建会话
-        </el-button>
+        <transition name="fade">
+          <el-button v-if="sidebarExpanded" type="primary" size="small" class="new-chat-btn" @click="handleNewChat">
+            <el-icon><Plus /></el-icon>
+            新建会话
+          </el-button>
+        </transition>
+      </div>
+
+      <!-- 未展开时显示的按钮 -->
+      <div v-if="!sidebarExpanded" class="collapsed-new-chat" @click="handleNewChat">
+        <el-icon><Plus /></el-icon>
       </div>
 
       <div class="session-list">
@@ -20,29 +32,29 @@
           <div class="session-icon">
             <el-icon><ChatDotRound /></el-icon>
           </div>
-          <span class="session-title">{{ session.title }}</span>
-          <el-icon class="delete-btn" @click.stop="handleDeleteSession(session.id)">
-            <Delete />
-          </el-icon>
+          <transition name="fade">
+            <span v-if="sidebarExpanded" class="session-title">{{ session.title }}</span>
+          </transition>
+          <transition name="fade">
+            <el-icon v-if="sidebarExpanded" class="delete-btn" @click.stop="handleDeleteSession(session.id)">
+              <Delete />
+            </el-icon>
+          </transition>
         </div>
       </div>
 
       <div class="sidebar-footer">
-        <el-dropdown @command="handleCommand">
-          <div class="user-info">
-            <div class="user-avatar">
-              <el-icon><User /></el-icon>
-            </div>
-            <span class="username">{{ userStore.userInfo?.username }}</span>
-            <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+        <div v-if="sidebarExpanded" class="user-info" @click="handleCommand('logout')">
+          <div class="user-avatar">
+            <el-icon><User /></el-icon>
           </div>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="settings">个人设置</el-dropdown-item>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+          <span class="username">{{ userStore.userInfo?.username }}</span>
+        </div>
+        <div v-else class="collapsed-user" @click="handleCommand('logout')">
+          <div class="user-avatar">
+            <el-icon><User /></el-icon>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -104,7 +116,7 @@
             <!-- 正在回复 -->
             <div v-if="isStreaming" class="message assistant">
               <div class="message-avatar">
-                <el-icon><Robot /></el-icon>
+                <el-icon><Service /></el-icon>
               </div>
               <div class="message-content">
                 <span class="typing">
@@ -121,15 +133,52 @@
       <!-- 输入区域 -->
       <div class="input-area">
         <div class="input-container">
-          <div class="mode-select">
-            <el-select v-model="chatMode" placeholder="选择模式" class="mode-selector">
-              <el-option label="💬 通用对话" value="chat" />
-              <el-option label="💻 代码生成" value="code_generate" />
-              <el-option label="🔍 代码解释" value="code_explain" />
-              <el-option label="⚡ 代码优化" value="code_optimize" />
-              <el-option label="🛡️ 漏洞检测" value="code_vuln" />
-              <el-option label="🧪 单元测试" value="code_test" />
-            </el-select>
+          <div class="input-tools">
+            <!-- 上传文件按钮 -->
+            <el-upload
+              class="file-upload"
+              :action="uploadUrl"
+              :headers="uploadHeaders"
+              :show-file-list="false"
+              :on-success="handleFileUpload"
+              :on-error="handleUploadError"
+              :before-upload="beforeUpload"
+            >
+              <el-button text class="tool-btn">
+                <el-icon><FolderAdd /></el-icon>
+              </el-button>
+            </el-upload>
+
+            <!-- 模式选择器 -->
+            <el-dropdown trigger="click" @command="handleModeChange">
+              <div class="mode-trigger">
+                <el-icon><Operation /></el-icon>
+                <span class="mode-label">{{ modeLabel }}</span>
+                <el-icon class="arrow"><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu class="mode-dropdown">
+                  <el-dropdown-item command="chat">
+                    <span class="mode-icon">💬</span> 通用对话
+                  </el-dropdown-item>
+                  <el-dropdown-item command="code_generate">
+                    <span class="mode-icon">💻</span> 代码生成
+                  </el-dropdown-item>
+                  <el-dropdown-item command="code_explain">
+                    <span class="mode-icon">🔍</span> 代码解释
+                  </el-dropdown-item>
+                  <el-dropdown-item command="code_optimize">
+                    <span class="mode-icon">⚡</span> 代码优化
+                  </el-dropdown-item>
+                  <el-dropdown-item command="code_vuln">
+                    <span class="mode-icon">🛡️</span> 漏洞检测
+                  </el-dropdown-item>
+                  <el-dropdown-item command="code_test">
+                    <span class="mode-icon">🧪</span> 单元测试
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
 
           <div class="input-wrapper">
@@ -158,15 +207,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, User, ChatDotRound, ArrowDown, Promotion, Service } from '@element-plus/icons-vue'
+import { Plus, Delete, User, ChatDotRound, ArrowDown, Promotion, Service, FolderAdd, Operation } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import { useUserStore } from '../stores/user'
 import { useChatStore } from '../stores/chat'
 import { chat, chatWithMode } from '../api/chat'
+import { uploadDocument } from '../api/rag'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -176,6 +226,26 @@ const inputMessage = ref('')
 const chatMode = ref('chat')
 const isStreaming = ref(false)
 const chatAreaRef = ref<HTMLElement>()
+const sidebarExpanded = ref(false)
+
+// 计算模式标签
+const modeLabel = computed(() => {
+  const labels: Record<string, string> = {
+    chat: '通用对话',
+    code_generate: '代码生成',
+    code_explain: '代码解释',
+    code_optimize: '代码优化',
+    code_vuln: '漏洞检测',
+    code_test: '单元测试'
+  }
+  return labels[chatMode.value] || '通用对话'
+})
+
+// 上传配置
+const uploadUrl = '/api/v1/rag/upload'
+const uploadHeaders = computed(() => ({
+  Authorization: `Bearer ${userStore.token}`
+}))
 
 // 配置marked
 marked.setOptions({
@@ -189,11 +259,25 @@ const renderMarkdown = (content: string) => {
   return marked(content)
 }
 
+// 截取字符串（用于生成会话标题）
+const truncate = (str: string, len: number): string => {
+  if (!str) return ''
+  return str.length > len ? str.slice(0, len) + '...' : str
+}
+
+// 生成问题摘要（6-10个字）
+const generateSummary = (message: string): string => {
+  // 去除多余空白字符
+  const cleaned = message.replace(/\s+/g, '').trim()
+  // 截取前8个字符作为摘要
+  return truncate(cleaned, 8)
+}
+
 // 新建会话
 const handleNewChat = async () => {
-  const title = inputMessage.value.slice(0, 20) || '新会话'
-  const session = await chatStore.createNewSession(title)
-  chatStore.selectSession(session.id)
+  // 清空当前会话消息，显示欢迎页
+  chatStore.selectSession(0)
+  inputMessage.value = ''
 }
 
 // 选择会话
@@ -210,13 +294,50 @@ const handleDeleteSession = async (id: number) => {
   ElMessage.success('删除成功')
 }
 
+// 模式切换
+const handleModeChange = (mode: string) => {
+  chatMode.value = mode
+}
+
+// 文件上传前检查
+const beforeUpload = (file: File) => {
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB')
+  }
+  return isLt10M
+}
+
+// 文件上传成功
+const handleFileUpload = async (response: any, file: File) => {
+  ElMessage.success('文件上传成功，正在处理...')
+  // 如果有会话，自动发送文件内容
+  if (chatStore.currentSessionId) {
+    const fileContent = `请分析以下文件：${file.name}`
+    inputMessage.value = fileContent
+  } else {
+    // 创建新会话
+    const title = truncate(file.name.replace(/\.[^/.]+$/, ''), 10)
+    const session = await chatStore.createNewSession(title)
+    chatStore.selectSession(session.id)
+    inputMessage.value = `请分析以下文件：${file.name}`
+  }
+}
+
+// 文件上传失败
+const handleUploadError = () => {
+  ElMessage.error('文件上传失败')
+}
+
 // 发送消息
 const handleSend = async () => {
   if (!inputMessage.value.trim() || isStreaming.value) return
 
   // 如果没有会话，先创建
   if (!chatStore.currentSessionId) {
-    await handleNewChat()
+    const summary = generateSummary(inputMessage.value)
+    const session = await chatStore.createNewSession(summary)
+    chatStore.selectSession(session.id)
   }
 
   const message = inputMessage.value.trim()
@@ -286,27 +407,37 @@ onMounted(async () => {
   font-family: 'DM Sans', sans-serif;
 }
 
-/* 侧边栏 */
+/* 侧边栏 - 收拢/展开 */
 .sidebar {
-  width: 280px;
+  width: 64px;
+  min-width: 64px;
   background: #14141a;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #27272a;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar.expanded {
+  width: 280px;
+  min-width: 280px;
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 24px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .logo {
   font-family: 'DM Serif Display', serif;
-  font-size: 24px;
+  font-size: 20px;
   color: #f59e0b;
   margin: 0;
+  white-space: nowrap;
 }
 
 .new-chat-btn {
@@ -314,10 +445,31 @@ onMounted(async () => {
   border: none;
   color: #0a0a0f;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .new-chat-btn:hover {
   background: #d97706;
+}
+
+/* 收拢状态的新建按钮 */
+.collapsed-new-chat {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  background: #f59e0b;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0a0a0f;
+  transition: all 0.2s;
+}
+
+.collapsed-new-chat:hover {
+  background: #d97706;
+  transform: scale(1.05);
 }
 
 .session-list {
@@ -330,11 +482,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px;
   cursor: pointer;
   border-radius: 12px;
   transition: all 0.2s ease;
   margin-bottom: 4px;
+  justify-content: center;
+}
+
+.sidebar.expanded .session-item {
+  justify-content: flex-start;
 }
 
 .session-item:hover {
@@ -354,6 +511,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: #71717a;
+  flex-shrink: 0;
 }
 
 .session-item.active .session-icon {
@@ -375,7 +533,6 @@ onMounted(async () => {
 }
 
 .delete-btn {
-  opacity: 0;
   color: #71717a;
   transition: opacity 0.2s;
 }
@@ -391,6 +548,12 @@ onMounted(async () => {
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid #27272a;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar.expanded .sidebar-footer {
+  justify-content: flex-start;
 }
 
 .user-info {
@@ -407,6 +570,18 @@ onMounted(async () => {
   background: #1c1c24;
 }
 
+.collapsed-user {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0a0f;
+  cursor: pointer;
+}
+
 .user-avatar {
   width: 36px;
   height: 36px;
@@ -416,17 +591,24 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: #0a0a0f;
+  flex-shrink: 0;
 }
 
 .username {
-  flex: 1;
   color: #fafafa;
   font-size: 14px;
   font-weight: 500;
 }
 
-.dropdown-icon {
-  color: #71717a;
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* 主内容区 */
@@ -617,23 +799,78 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.mode-select {
+.input-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
-.mode-selector {
-  width: 200px;
+.file-upload {
+  display: inline-block;
 }
 
-.mode-selector :deep(.el-input__wrapper) {
-  background: #14141a;
-  border: 1px solid #27272a;
-  box-shadow: none;
-  border-radius: 10px;
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #27272a;
+  border: none;
+  color: #71717a;
+  transition: all 0.2s;
 }
 
-.mode-selector :deep(.el-input__inner) {
+.tool-btn:hover {
+  background: #3f3f46;
   color: #fafafa;
+}
+
+/* 模式选择器 */
+.mode-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #27272a;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fafafa;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.mode-trigger:hover {
+  background: #3f3f46;
+}
+
+.mode-label {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  font-size: 12px;
+  color: #71717a;
+}
+
+.mode-dropdown {
+  background: #1c1c24;
+  border: 1px solid #27272a;
+}
+
+.mode-dropdown :deep(.el-dropdown-menu__item) {
+  color: #d4d4d8;
+}
+
+.mode-dropdown :deep(.el-dropdown-menu__item:hover) {
+  background: #27272a;
+  color: #fafafa;
+}
+
+.mode-icon {
+  margin-right: 8px;
 }
 
 .input-wrapper {
