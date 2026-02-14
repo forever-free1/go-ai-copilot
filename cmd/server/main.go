@@ -2,13 +2,14 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"go-ai-copilot/internal/cache"
 	"go-ai-copilot/internal/config"
 	"go-ai-copilot/internal/database"
 	"go-ai-copilot/internal/handler"
-	"go-ai-copilot/internal/middleware"
+	"go-ai-copilot/internal/router"
 	"go-ai-copilot/pkg/jwt"
 )
 
@@ -50,9 +51,8 @@ func main() {
 	// 4. 初始化JWT
 	jwtTool := jwt.New(cfg.JWT.Secret, cfg.JWT.ExpireTime, cfg.JWT.Issuer)
 
-	// 5. 初始化 Gin
+	// 5. 设置Gin模式
 	gin.SetMode(cfg.Server.Mode)
-	r := gin.Default()
 
 	// 6. 初始化处理器
 	chatHandler, err := handler.NewChatHandler()
@@ -62,52 +62,21 @@ func main() {
 	userHandler := handler.NewUserHandler(jwtTool)
 	sessionHandler := handler.NewSessionHandler()
 
-	// 7. 初始化中间件
-	authMiddleware := middleware.NewAuthMiddleware(jwtTool)
+	// 7. 设置路由
+	r := router.Setup(jwtTool, chatHandler, userHandler, sessionHandler)
 
-	// 8. 注册路由
-
-	// 健康检查
-	r.GET("/health", chatHandler.Health)
-
-	// v1 API 路由组
-	v1 := r.Group("/api/v1")
-	{
-		// 用户认证接口（无需登录）
-		user := v1.Group("/user")
-		{
-			user.POST("/register", userHandler.Register)
-			user.POST("/login", userHandler.Login)
-		}
-
-		// 需要登录的接口 - 直接使用middleware
-		authorized := v1.Group("")
-		authorized.Use(authMiddleware.Handler())
-
-		// 用户信息
-		authorized.GET("/user/info", userHandler.GetUserInfo)
-		authorized.PUT("/user/info", userHandler.UpdateUserInfo)
-		authorized.PUT("/user/password", userHandler.ChangePassword)
-
-		// 会话管理
-		authorized.GET("/session/list", sessionHandler.GetSessions)
-		authorized.POST("/session", sessionHandler.CreateSession)
-		authorized.GET("/session/:id", sessionHandler.GetSession)
-		authorized.PUT("/session/:id", sessionHandler.UpdateSession)
-		authorized.DELETE("/session/:id", sessionHandler.DeleteSession)
-		authorized.GET("/session/:id/history", sessionHandler.GetHistory)
-
-		// 对话接口
-		authorized.POST("/chat", chatHandler.Chat)
-		authorized.POST("/chat/stream", chatHandler.StreamChat)
-		authorized.POST("/chat/mode", chatHandler.HandleChatWithMode)
-	}
-
-	// 9. 启动服务
+	// 8. 启动服务
 	port := cfg.Server.Port
 	log.Printf("服务启动成功，监听端口: %s", port)
 	log.Printf("AI模型: %s", cfg.AI.Model)
 	log.Printf("AI地址: %s", cfg.AI.BaseURL)
+
+	// 检查环境变量中是否有AI API Key
+	if apiKey := os.Getenv("AI_API_KEY"); apiKey != "" {
+		log.Printf("AI API Key: 已配置")
+	} else {
+		log.Printf("警告: 未配置 AI_API_KEY 环境变量")
+	}
 
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal("服务启动失败: ", err)
