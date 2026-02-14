@@ -1,9 +1,10 @@
 version: '3.8'
 
 services:
+  # PostgreSQL数据库（支持pgvector向量库）
   postgres:
-    image: postgres:15
-    container_name: go-ai-copilot-db
+    image: pgvector/pgvector:pg15
+    container_name: go-ai-copilot-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -17,6 +18,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: go-ai-copilot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:

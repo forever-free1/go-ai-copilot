@@ -38,7 +38,11 @@ func Init(cfg Config) error {
 	}
 
 	// 自动迁移表结构
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(
+		&model.User{},
+		&model.Session{},
+		&model.Message{},
+	); err != nil {
 		return fmt.Errorf("表迁移失败: %v", err)
 	}
 
