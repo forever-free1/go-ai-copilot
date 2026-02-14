@@ -48,6 +48,11 @@ export const useChatStore = defineStore('chat', () => {
 
   // 选择会话
   const selectSession = async (id: number) => {
+    if (!id || id === 0) {
+      currentSessionId.value = null
+      messages.value = []
+      return
+    }
     currentSessionId.value = id
     loading.value = true
     try {
