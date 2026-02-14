@@ -57,7 +57,7 @@
           >
             <div class="message-avatar">
               <el-icon v-if="msg.role === 'user'"><User /></el-icon>
-              <el-icon v-else><Robot /></el-icon>
+              <el-icon v-else><ChatDotRound /></el-icon>
             </div>
             <div class="message-content">
               <div v-if="msg.role === 'assistant'" class="markdown-body" v-html="renderMarkdown(msg.content)"></div>
@@ -116,7 +116,7 @@
 import { ref, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, User, Robot } from '@element-plus/icons-vue'
+import { Delete, User, ChatDotRound } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import { useUserStore } from '../stores/user'

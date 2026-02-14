@@ -1,3 +1,11 @@
+# ========== Docker Compose 配置 ==========
+# 启动命令: docker-compose up -d
+# 停止命令: docker-compose down
+#
+# 包含服务:
+#   - PostgreSQL 15 (带 pgvector 向量插件)
+#   - Redis 7 (会话缓存)
+
 version: '3.8'
 
 services:

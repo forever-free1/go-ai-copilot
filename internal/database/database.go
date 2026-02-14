@@ -37,6 +37,9 @@ func Init(cfg Config) error {
 		return fmt.Errorf("数据库连接失败: %v", err)
 	}
 
+	// 先创建 pgvector 扩展（必须在表迁移之前创建）
+	db.Exec("CREATE EXTENSION IF NOT EXISTS vector")
+
 	// 自动迁移表结构
 	if err := db.AutoMigrate(
 		&model.User{},
@@ -49,11 +52,7 @@ func Init(cfg Config) error {
 	}
 
 	// 创建向量索引（如果不存在）
-	db.Exec("CREATE EXTENSION IF NOT EXISTS vector")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_rag_chunks_embedding ON rag_chunks USING ivfflat (embedding vector_cosine_ops)")
-
-	// 注册向量类型
-	// 注意：pgvector 需要数据库支持 vector 扩展
 
 	DB = db
 	log.Println("数据库连接成功")

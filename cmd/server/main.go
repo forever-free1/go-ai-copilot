@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go-ai-copilot/internal/cache"
@@ -13,12 +14,38 @@ import (
 	"go-ai-copilot/pkg/jwt"
 )
 
+// loadEnvFile 加载.env文件
+func loadEnvFile(filename string) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return // 如果文件不存在则忽略
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			if key != "" && os.Getenv(key) == "" {
+				os.Setenv(key, value)
+			}
+		}
+	}
+}
+
 // @title go-ai-copilot API
 // @version 1.0
 // @description 基于 Gin 开发的 AI 代码助手
 // @host localhost:8080
 
 func main() {
+	// 0. 加载.env文件
+	loadEnvFile(".env")
+
 	// 1. 加载配置
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
@@ -57,7 +84,9 @@ func main() {
 	// 6. 初始化处理器
 	chatHandler, err := handler.NewChatHandler()
 	if err != nil {
-		log.Fatalf("AI客户端初始化失败: %v", err)
+		log.Printf("警告: AI客户端初始化失败: %v", err)
+		// 创建一个空的处理器以避免空指针
+		chatHandler = &handler.ChatHandler{}
 	}
 	userHandler := handler.NewUserHandler(jwtTool)
 	sessionHandler := handler.NewSessionHandler()

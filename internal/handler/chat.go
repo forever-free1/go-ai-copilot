@@ -55,6 +55,15 @@ type ChatResponse struct {
 
 // Chat 普通对话接口（支持会话上下文）
 func (h *ChatHandler) Chat(c *gin.Context) {
+	// 检查AI客户端是否可用
+	if h.client == nil {
+		c.JSON(http.StatusServiceUnavailable, ChatResponse{
+			Code:    503,
+			Message: "AI服务暂不可用，请配置API_KEY",
+		})
+		return
+	}
+
 	userID := c.GetUint("userID")
 
 	var req ChatRequest
@@ -128,6 +137,15 @@ func (h *ChatHandler) buildMessages(sessionID, userID uint, newMessage, systemPr
 // StreamChat SSE流式对话接口
 // 核心亮点：使用Goroutine+Channel处理流式响应
 func (h *ChatHandler) StreamChat(c *gin.Context) {
+	// 检查AI客户端是否可用
+	if h.client == nil {
+		c.JSON(http.StatusServiceUnavailable, ChatResponse{
+			Code:    503,
+			Message: "AI服务暂不可用，请配置API_KEY",
+		})
+		return
+	}
+
 	userID := c.GetUint("userID")
 
 	var req ChatRequest
@@ -224,6 +242,15 @@ func (h *ChatHandler) Health(c *gin.Context) {
 // mode: chat(通用对话) / code_generate(代码生成) / code_explain(代码解释)
 //                            / code_optimize(代码优化) / code_vuln(漏洞检测) / code_test(单元测试)
 func (h *ChatHandler) HandleChatWithMode(c *gin.Context) {
+	// 检查AI客户端是否可用
+	if h.client == nil {
+		c.JSON(http.StatusServiceUnavailable, ChatResponse{
+			Code:    503,
+			Message: "AI服务暂不可用，请配置API_KEY",
+		})
+		return
+	}
+
 	userID := c.GetUint("userID")
 	mode := c.DefaultPostForm("mode", "chat")
 
