@@ -1,35 +1,65 @@
 package main
 
 import (
-	"net/http"
+	"log"
 
 	"github.com/gin-gonic/gin"
+	"go-ai-copilot/internal/config"
+	"go-ai-copilot/internal/handler"
 )
 
+// @title go-ai-copilot API
+// @version 1.0
+// @description 基于 Gin 开发的 AI 代码助手
+// @host localhost:8080
+
 func main() {
-	// 1. 初始化 Gin 的默认路由引擎 (自带 Logger 和 Recovery 中间件)
+	// 1. 加载配置
+	cfg, err := config.Load("config.yaml")
+	if err != nil {
+		log.Fatalf("配置加载失败: %v", err)
+	}
+
+	// 2. 初始化 Gin
+	gin.SetMode(cfg.Server.Mode)
 	r := gin.Default()
 
-	// 2. 注册 GET 路由 /api/chat
-	r.GET("/api/chat", func(c *gin.Context) {
-		// 获取 URL 中的 question 参数
-		question := c.Query("question")
+	// 3. 初始化处理器
+	chatHandler, err := handler.NewChatHandler()
+	if err != nil {
+		log.Fatalf("AI客户端初始化失败: %v", err)
+	}
 
-		// 简单的判空逻辑
-		if question == "" {
-			question = "你没有问我任何问题哦~"
-		}
+	// 4. 注册路由
+	r.GET("/health", chatHandler.Health)
 
-		// 3. 返回标准的 JSON 响应
-		c.JSON(http.StatusOK, gin.H{
-			"code":    0,
-			"message": "success",
-			"data": gin.H{
-				"reply": "我是智能 OnCall Agent 的雏形 (基于 Gin 构建)。你刚才说：" + question,
-			},
-		})
-	})
+	// v1 API 路由组
+	v1 := r.Group("/api/v1")
+	{
+		// 对话接口
+		v1.POST("/chat", chatHandler.Chat)
+		v1.POST("/chat/stream", chatHandler.StreamChat)
+		v1.POST("/chat/mode", chatHandler.HandleChatWithMode)
+	}
 
-	// 4. 启动服务，监听 6872 端口
-	r.Run(":6872")
+	// 5. 启动服务
+	port := cfg.Server.Port
+	log.Printf("服务启动成功，监听端口: %s", port)
+	log.Printf("AI模型: %s", cfg.AI.Model)
+	log.Printf("AI地址: %s", cfg.AI.BaseURL)
+
+	if err := r.Run(":" + port); err != nil {
+		log.Fatal("服务启动失败: ", err)
+	}
 }
+
+// curl测试命令：
+// 普通对话
+// curl -X POST http://localhost:8080/api/v1/chat \
+//   -H "Content-Type: application/json" \
+//   -d '{"message": "你好，请介绍一下自己"}'
+
+// 流式对话
+// curl -X POST http://localhost:8080/api/v1/chat/stream \
+//   -H "Content-Type: application/json" \
+//   -d '{"message": "用Go写一个Hello World程序"}'
