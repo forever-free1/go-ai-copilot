@@ -1,5 +1,14 @@
 import request from './request'
 
+// 普通对话
+export const chat = (params: { message: string; session_id: number }) => {
+  return request({
+    url: '/api/v1/chat',
+    method: 'post',
+    data: { message: params.message, session_id: params.session_id }
+  })
+}
+
 // 上传文档
 export const uploadDocument = (formData: FormData) => {
   return request({
@@ -46,10 +55,10 @@ export const ragSearch = (query: string) => {
 }
 
 // RAG 对话
-export const ragChat = (message: string, session_id: number) => {
+export const ragChat = (params: { message: string; session_id?: number }) => {
   return request({
     url: '/api/v1/rag/chat',
     method: 'post',
-    data: { message, session_id }
+    data: { message: params.message, session_id: params.session_id || 0 }
   })
 }
