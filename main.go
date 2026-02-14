@@ -5,7 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go-ai-copilot/internal/config"
+	"go-ai-copilot/internal/database"
 	"go-ai-copilot/internal/handler"
+	"go-ai-copilot/internal/middleware"
+	"go-ai-copilot/pkg/jwt"
 )
 
 // @title go-ai-copilot API
@@ -20,29 +23,68 @@ func main() {
 		log.Fatalf("配置加载失败: %v", err)
 	}
 
-	// 2. 初始化 Gin
+	// 2. 初始化数据库
+	dbCfg := database.Config{
+		Host:     cfg.Database.Host,
+		Port:     cfg.Database.Port,
+		User:     cfg.Database.User,
+		Password: cfg.Database.Password,
+		DBName:   cfg.Database.DBName,
+		SSLMode:  cfg.Database.SSLMode,
+	}
+	if err := database.Init(dbCfg); err != nil {
+		log.Fatalf("数据库初始化失败: %v", err)
+	}
+
+	// 3. 初始化JWT
+	jwtTool := jwt.New(cfg.JWT.Secret, cfg.JWT.ExpireTime, cfg.JWT.Issuer)
+
+	// 4. 初始化 Gin
 	gin.SetMode(cfg.Server.Mode)
 	r := gin.Default()
 
-	// 3. 初始化处理器
+	// 5. 初始化处理器
 	chatHandler, err := handler.NewChatHandler()
 	if err != nil {
 		log.Fatalf("AI客户端初始化失败: %v", err)
 	}
+	userHandler := handler.NewUserHandler(jwtTool)
 
-	// 4. 注册路由
+	// 6. 初始化中间件
+	authMiddleware := middleware.NewAuthMiddleware(jwtTool)
+
+	// 7. 注册路由
+
+	// 健康检查
 	r.GET("/health", chatHandler.Health)
 
 	// v1 API 路由组
 	v1 := r.Group("/api/v1")
 	{
-		// 对话接口
-		v1.POST("/chat", chatHandler.Chat)
-		v1.POST("/chat/stream", chatHandler.StreamChat)
-		v1.POST("/chat/mode", chatHandler.HandleChatWithMode)
+		// 用户认证接口（无需登录）
+		user := v1.Group("/user")
+		{
+			user.POST("/register", userHandler.Register)
+			user.POST("/login", userHandler.Login)
+		}
+
+		// 需要登录的接口
+		protected := v1.Group("")
+		protected.Use(authMiddleware.Handler())
+		{
+			// 用户信息
+			protected.GET("/user/info", userHandler.GetUserInfo)
+			protected.PUT("/user/info", userHandler.UpdateUserInfo)
+			protected.PUT("/user/password", userHandler.ChangePassword)
+
+			// 对话接口
+			protected.POST("/chat", chatHandler.Chat)
+			protected.POST("/chat/stream", chatHandler.StreamChat)
+			protected.POST("/chat/mode", chatHandler.HandleChatWithMode)
+		}
 	}
 
-	// 5. 启动服务
+	// 8. 启动服务
 	port := cfg.Server.Port
 	log.Printf("服务启动成功，监听端口: %s", port)
 	log.Printf("AI模型: %s", cfg.AI.Model)
@@ -52,14 +94,3 @@ func main() {
 		log.Fatal("服务启动失败: ", err)
 	}
 }
-
-// curl测试命令：
-// 普通对话
-// curl -X POST http://localhost:8080/api/v1/chat \
-//   -H "Content-Type: application/json" \
-//   -d '{"message": "你好，请介绍一下自己"}'
-
-// 流式对话
-// curl -X POST http://localhost:8080/api/v1/chat/stream \
-//   -H "Content-Type: application/json" \
-//   -d '{"message": "用Go写一个Hello World程序"}'

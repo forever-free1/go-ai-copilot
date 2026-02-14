@@ -3,15 +3,18 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Config 全局配置结构
 type Config struct {
-	Server ServerConfig `yaml:"server"`
-	AI     AIConfig     `yaml:"ai"`
-	Redis  RedisConfig  `yaml:"redis"`
+	Server   ServerConfig   `yaml:"server"`
+	AI       AIConfig       `yaml:"ai"`
+	Database DatabaseConfig `yaml:"database"`
+	Redis    RedisConfig    `yaml:"redis"`
+	JWT      JWTConfig      `yaml:"jwt"`
 }
 
 // ServerConfig 服务配置
@@ -22,11 +25,21 @@ type ServerConfig struct {
 
 // AIConfig AI配置
 type AIConfig struct {
-	BaseURL   string  `yaml:"base_url"`
-	Model     string  `yaml:"model"`
+	BaseURL    string  `yaml:"base_url"`
+	Model      string  `yaml:"model"`
 	Temperature float64 `yaml:"temperature"`
-	MaxTokens int     `yaml:"max_tokens"`
-	Timeout   int     `yaml:"timeout"`
+	MaxTokens  int     `yaml:"max_tokens"`
+	Timeout    int     `yaml:"timeout"`
+}
+
+// DatabaseConfig 数据库配置
+type DatabaseConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"sslmode"`
 }
 
 // RedisConfig Redis配置
@@ -34,6 +47,13 @@ type RedisConfig struct {
 	Addr     string `yaml:"addr"`
 	Password string `yaml:"password"`
 	DB       int    `yaml:"db"`
+}
+
+// JWTConfig JWT配置
+type JWTConfig struct {
+	Secret     string        `yaml:"secret"`
+	ExpireTime time.Duration `yaml:"expire_time"`
+	Issuer     string        `yaml:"issuer"`
 }
 
 // GlobalConfig 全局配置实例

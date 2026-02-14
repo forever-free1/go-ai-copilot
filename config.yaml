@@ -14,8 +14,23 @@ ai:
   # 超时设置(秒)
   timeout: 120
 
+# 数据库配置
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  dbname: "go_ai_copilot"
+  sslmode: "disable"
+
 # Redis配置
 redis:
   addr: "localhost:6379"
   password: ""
   db: 0
+
+# JWT配置
+jwt:
+  secret: "go-ai-copilot-secret-key-change-in-production"
+  expire_time: 24h
+  issuer: "go-ai-copilot"
