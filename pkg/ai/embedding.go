@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/sashabaranov/go-openai"
@@ -12,6 +13,7 @@ import (
 type EmbeddingClient struct {
 	apiKey  string
 	baseURL string
+	model   string
 	client  *openai.Client
 }
 
@@ -28,9 +30,15 @@ func NewEmbeddingClient(apiKey, baseURL, model string) (*EmbeddingClient, error)
 		return nil, errors.New("Embedding API_KEY未设置")
 	}
 
+	// 默认使用DeepSeek的embedding模型
+	if model == "" {
+		model = "deepseek-embedding"
+	}
+
 	cfg := openai.DefaultConfig(apiKey)
 	if baseURL != "" {
-		cfg.BaseURL = baseURL
+		// DeepSeek的embedding API需要使用v1路径
+		cfg.BaseURL = baseURL + "/v1"
 	}
 
 	client := openai.NewClientWithConfig(cfg)
@@ -38,6 +46,7 @@ func NewEmbeddingClient(apiKey, baseURL, model string) (*EmbeddingClient, error)
 	return &EmbeddingClient{
 		apiKey:  apiKey,
 		baseURL: baseURL,
+		model:   model,
 		client:  client,
 	}, nil
 }
@@ -45,13 +54,13 @@ func NewEmbeddingClient(apiKey, baseURL, model string) (*EmbeddingClient, error)
 // GetEmbedding 获取文本的向量表示
 func (c *EmbeddingClient) GetEmbedding(ctx context.Context, text string) ([]float32, error) {
 	req := openai.EmbeddingRequest{
-		Model: openai.AdaEmbeddingV2,
+		Model: openai.EmbeddingModel(c.model),
 		Input: text,
 	}
 
 	resp, err := c.client.CreateEmbeddings(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("embedding请求失败: %v", err)
 	}
 
 	if len(resp.Data) == 0 {
@@ -64,13 +73,13 @@ func (c *EmbeddingClient) GetEmbedding(ctx context.Context, text string) ([]floa
 // GetEmbeddings 批量获取文本的向量表示
 func (c *EmbeddingClient) GetEmbeddings(ctx context.Context, texts []string) ([][]float32, error) {
 	req := openai.EmbeddingRequest{
-		Model: openai.AdaEmbeddingV2,
+		Model: openai.EmbeddingModel(c.model),
 		Input: texts,
 	}
 
 	resp, err := c.client.CreateEmbeddings(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("embedding请求失败: %v", err)
 	}
 
 	embeddings := make([][]float32, len(resp.Data))

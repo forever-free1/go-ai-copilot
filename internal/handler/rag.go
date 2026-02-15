@@ -29,11 +29,17 @@ type RAGHandler struct {
 func NewRAGHandler() (*RAGHandler, error) {
 	cfg := config.GlobalConfig
 
+	// 从配置获取embedding模型，如果没有配置则使用DeepSeek的默认模型
+	embeddingModel := cfg.AI.EmbeddingModel
+	if embeddingModel == "" {
+		embeddingModel = "deepseek-embedding"
+	}
+
 	// 创建embedding客户端
 	embeddingClient, err := ai.NewEmbeddingClient(
 		os.Getenv("EMBEDDING_API_KEY"),
 		cfg.AI.BaseURL, // 使用与AI相同的base URL
-		"text-embedding-3-small", // 默认模型
+		embeddingModel,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("embedding客户端初始化失败: %v", err)
